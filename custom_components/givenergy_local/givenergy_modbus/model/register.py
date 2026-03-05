@@ -1,4 +1,5 @@
 import builtins
+import inspect
 from dataclasses import dataclass
 from datetime import datetime as datetime_type
 from json import JSONEncoder
@@ -212,10 +213,13 @@ class RegisterGetter:
         def infer_return_type(obj: Any):
             # Unwrap staticmethod/classmethod to get underlying function for annotations
             func = getattr(obj, "__func__", obj)
-            if hasattr(func, "__annotations__") and (
-                ret := func.__annotations__.get("return", None)
-            ):
-                return ret
+            try:
+                # inspect.get_annotations handles Python 3.14's lazy __annotate__ protocol
+                annotations = inspect.get_annotations(func, eval_str=False)
+                if ret := annotations.get("return", None):
+                    return ret
+            except Exception:
+                pass
             # Only return obj if it's a type (e.g. IntEnum), not a callable
             if isinstance(obj, type):
                 return obj
